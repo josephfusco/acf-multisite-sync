@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<ruleset name="WordPress Plugin Coding Standards">
+    <description>A custom set of code standard rules for ACF Multisite Sync.</description>
+
+    <!-- What to scan -->
+    <file>.</file>
+
+    <!-- Exclude paths -->
+    <exclude-pattern>/vendor/*</exclude-pattern>
+    <exclude-pattern>/node_modules/*</exclude-pattern>
+    <exclude-pattern>/tests/*</exclude-pattern>
+
+    <!-- Show progress -->
+    <arg value="ps"/>
+    <arg name="colors"/>
+    <arg name="parallel" value="8"/>
+    <arg name="extensions" value="php"/>
+
+    <!-- Rules: Check PHP version compatibility -->
+    <config name="testVersion" value="7.4-"/>
+
+    <!-- Rules: WordPress Coding Standards -->
+    <config name="minimum_supported_wp_version" value="5.8"/>
+
+    <!-- Include the WordPress-Extra standard -->
+    <rule ref="WordPress-Extra"/>
+
+    <!-- Include WordPress-Docs -->
+    <rule ref="WordPress-Docs"/>
+
+    <!-- Allow short array syntax -->
+    <rule ref="Generic.Arrays.DisallowShortArraySyntax.Found">
+        <severity>0</severity>
+    </rule>
+
+    <!-- Add custom text domain -->
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="acf-multisite-sync"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- Add custom prefix -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="acf_ms"/>
+                <element value="ACF_MS"/>
+                <element value="AcfMultisiteSync"/>
+            </property>
+        </properties>
+    </rule>
+</ruleset>

@@ -1,0 +1,34 @@
+{
+    "name": "josephfusco/acf-multisite-sync",
+    "description": "Synchronize ACF settings across WordPress multisite networks",
+    "type": "wordpress-plugin",
+    "license": "GPL-3.0-or-later",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "wp-coding-standards/wpcs": "^3.0",
+        "phpunit/phpunit": "^9.0",
+        "yoast/phpunit-polyfills": "^2.0",
+        "brain/monkey": "^2.6"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AcfMultisiteSync\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "phpcs": "phpcs",
+        "phpcbf": "phpcbf",
+        "test": "phpunit"
+    }
+}
