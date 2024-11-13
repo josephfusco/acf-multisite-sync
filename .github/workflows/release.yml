@@ -6,9 +6,9 @@ on:
       - "v*"
 
 permissions:
-  contents: write  # This is required for creating releases
-  issues: write    # If you want to add release notes from issues
-  pull-requests: write  # If you want to add release notes from PRs
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   build:
@@ -42,9 +42,22 @@ jobs:
         
       - name: Create plugin archive
         run: |
-          mkdir acf-multisite-sync
-          rsync -av --exclude={'.*',composer.*,phpcs.xml,phpunit.xml,tests,.git,.github} . acf-multisite-sync/
-          zip -r acf-multisite-sync.zip acf-multisite-sync
+          # Create temporary directory for building
+          mkdir build
+          
+          # Copy only the files we want in the release
+          cp -r includes build/
+          cp acf-multisite-sync.php build/
+          cp README.md build/
+          cp LICENSE.md build/
+          
+          # Create the zip from the build directory
+          cd build
+          zip -r ../acf-multisite-sync.zip .
+          cd ..
+          
+          # Clean up
+          rm -rf build
           
       - name: Get version
         id: get_version
