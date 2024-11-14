@@ -44,6 +44,19 @@ class ACF_Sync {
 		add_action( 'acf/save_post_type', array( $this, 'sync_post_types' ) );
 		add_action( 'acf/save_taxonomy', array( $this, 'sync_taxonomies' ) );
 		add_action( 'acf/update_field_group', array( $this, 'sync_field_groups' ) );
+		add_action( 'admin_menu', array( $this, 'add_sync_menu' ) );
+	}
+
+	/**
+	 * Plugin activation handler.
+	 */
+	public static function activate() {
+		if ( ! is_main_site() ) {
+			return;
+		}
+
+		$instance = self::get_instance();
+		$instance->sync_all_data();
 	}
 
 	/**
@@ -88,6 +101,68 @@ class ACF_Sync {
 	}
 
 	/**
+	 * Add sync menu to admin.
+	 */
+	public function add_sync_menu() {
+		if ( ! is_main_site() ) {
+			return;
+		}
+
+		add_submenu_page(
+			'edit.php?post_type=acf-field-group',
+			__( 'Sync to Subsites', 'acf-multisite-sync' ),
+			__( 'Sync to Subsites', 'acf-multisite-sync' ),
+			'manage_options',
+			'acf-sync-subsites',
+			array( $this, 'render_sync_page' )
+		);
+	}
+
+	/**
+	 * Render sync page.
+	 */
+	public function render_sync_page() {
+		if ( isset( $_POST['acf_sync_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['acf_sync_nonce'] ) ), 'acf_sync_action' ) ) {
+			$this->sync_all_data();
+			echo '<div class="notice notice-success"><p>' . esc_html__( 'Sync completed successfully!', 'acf-multisite-sync' ) . '</p></div>';
+		}
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'Sync ACF to Subsites', 'acf-multisite-sync' ); ?></h1>
+			<form method="post">
+				<?php wp_nonce_field( 'acf_sync_action', 'acf_sync_nonce' ); ?>
+				<p><?php esc_html_e( 'Click the button below to sync all ACF post types, taxonomies, and field groups to subsites.', 'acf-multisite-sync' ); ?></p>
+				<?php submit_button( __( 'Sync Now', 'acf-multisite-sync' ) ); ?>
+			</form>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Sync all ACF data to subsites.
+	 */
+	private function sync_all_data() {
+		if ( function_exists( 'acf_get_post_types' ) ) {
+			$post_types = acf_get_post_types();
+			foreach ( $post_types as $post_type ) {
+				$this->sync_post_types( $post_type );
+			}
+		}
+
+		if ( function_exists( 'acf_get_taxonomies' ) ) {
+			$taxonomies = acf_get_taxonomies();
+			foreach ( $taxonomies as $taxonomy ) {
+				$this->sync_taxonomies( $taxonomy );
+			}
+		}
+
+		$field_groups = acf_get_field_groups();
+		foreach ( $field_groups as $field_group ) {
+			$this->sync_field_groups( $field_group );
+		}
+	}
+
+	/**
 	 * Sync post types across sites.
 	 *
 	 * @param array $post_type Post type configuration.
@@ -105,13 +180,7 @@ class ACF_Sync {
 			}
 
 			switch_to_blog( $site_id );
-
-			// Sanitize and validate post type data.
-			$sanitized_post_type = $this->sanitize_post_type_data( $post_type );
-
-			// Update post type registration.
-			acf_update_post_type( $sanitized_post_type );
-
+			acf_update_post_type( $this->sanitize_post_type_data( $post_type ) );
 			restore_current_blog();
 		}
 	}
@@ -134,13 +203,7 @@ class ACF_Sync {
 			}
 
 			switch_to_blog( $site_id );
-
-			// Sanitize and validate taxonomy data.
-			$sanitized_taxonomy = $this->sanitize_taxonomy_data( $taxonomy );
-
-			// Update taxonomy registration.
-			acf_update_taxonomy( $sanitized_taxonomy );
-
+			acf_update_taxonomy( $this->sanitize_taxonomy_data( $taxonomy ) );
 			restore_current_blog();
 		}
 	}
@@ -164,13 +227,9 @@ class ACF_Sync {
 
 			switch_to_blog( $site_id );
 
-			// Sanitize and validate field group data.
 			$sanitized_field_group = $this->sanitize_field_group_data( $field_group );
-
-			// Update field group.
 			acf_update_field_group( $sanitized_field_group );
 
-			// Sync associated fields.
 			$fields = acf_get_fields( $field_group );
 			if ( $fields ) {
 				foreach ( $fields as $field ) {
