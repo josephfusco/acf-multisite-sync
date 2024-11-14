@@ -5,7 +5,7 @@ Synchronize ACF field groups, post types, and taxonomies from your primary site 
 ## Requirements
 
 - WordPress Multisite
-- ACF Pro (activated on all sites)
+- ACF Pro
 - PHP 8.0+
 
 ## Use Cases
@@ -16,10 +16,8 @@ Synchronize ACF field groups, post types, and taxonomies from your primary site 
 
 ## Installation
 
-1. Install and activate ACF Pro on all sites
-2. Upload plugin to `/wp-content/plugins/`
-3. Network activate via `/wp-admin/network/plugins.php`
-4. Activate ACF Pro license on each subsite
+1. Upload plugin to `/wp-content/plugins/`
+2. Network activate via `/wp-admin/network/plugins.php`
 
 ## Usage
 

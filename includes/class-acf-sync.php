@@ -47,11 +47,6 @@ class ACF_Sync {
 		add_action( 'admin_menu', array( $this, 'add_sync_menu' ) );
 		add_filter( 'plugin_action_links', array( $this, 'add_plugin_links' ), 10, 2 );
 		add_filter( 'network_admin_plugin_action_links', array( $this, 'add_plugin_links' ), 10, 2 );
-
-		// Check for ACF license status on subsites.
-		if ( ! is_main_site() ) {
-			add_action( 'admin_notices', array( $this, 'show_license_notice' ) );
-		}
 	}
 
 	/**
@@ -127,27 +122,6 @@ class ACF_Sync {
 	}
 
 	/**
-	 * Show admin notice for license activation requirement.
-	 */
-	public function show_license_notice() {
-		?>
-		<div class="notice notice-warning">
-			<p>
-				<?php 
-				esc_html_e( 
-					'ACF Multisite Sync: Please activate your ACF PRO license on this subsite for full functionality.', 
-					'acf-multisite-sync' 
-				); 
-				?>
-				<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=acf-field-group&page=acf-settings-updates' ) ); ?>">
-					<?php esc_html_e( 'Activate License', 'acf-multisite-sync' ); ?>
-				</a>
-			</p>
-		</div>
-		<?php
-	}
-
-	/**
 	 * Add sync menu to admin.
 	 */
 	public function add_sync_menu() {
@@ -207,6 +181,13 @@ class ACF_Sync {
 				$this->sync_taxonomies( $taxonomy );
 			}
 		}
+
+		/**
+		 * Fires after all data has been synced to a subsite.
+		 *
+		 * @param int $site_id The ID of the current subsite.
+		 */
+		do_action( 'acf_ms_sync_complete', get_current_blog_id() );
 	}
 
 	/**
@@ -227,7 +208,15 @@ class ACF_Sync {
 			}
 
 			switch_to_blog( $site_id );
-			acf_update_post_type( $this->sanitize_post_type_data( $post_type ) );
+
+			/**
+			 * Filter the post type data before sync.
+			 *
+			 * @param array $post_type The post type configuration.
+			 */
+			$filtered_post_type = apply_filters( 'acf_ms_sync_post_type', $this->sanitize_post_type_data( $post_type ) );
+			
+			acf_update_post_type( $filtered_post_type );
 			restore_current_blog();
 		}
 	}
@@ -250,7 +239,15 @@ class ACF_Sync {
 			}
 
 			switch_to_blog( $site_id );
-			acf_update_taxonomy( $this->sanitize_taxonomy_data( $taxonomy ) );
+
+			/**
+			 * Filter the taxonomy data before sync.
+			 *
+			 * @param array $taxonomy The taxonomy configuration.
+			 */
+			$filtered_taxonomy = apply_filters( 'acf_ms_sync_taxonomy', $this->sanitize_taxonomy_data( $taxonomy ) );
+			
+			acf_update_taxonomy( $filtered_taxonomy );
 			restore_current_blog();
 		}
 	}
@@ -291,11 +288,18 @@ class ACF_Sync {
 				// Ensure we have a clean key.
 				$original_group['key'] = wp_unslash( $original_group['key'] );
 
+				/**
+				 * Filter the field group data before sync.
+				 *
+				 * @param array $original_group The field group configuration.
+				 */
+				$filtered_group = apply_filters( 'acf_ms_sync_field_group', $original_group );
+
 				// Get all fields for this group.
-				$fields = acf_get_fields( $original_group );
+				$fields = acf_get_fields( $filtered_group );
 
 				// Update or create the field group.
-				$group_id = acf_update_field_group( $original_group );
+				$group_id = acf_update_field_group( $filtered_group );
 
 				// Handle the fields.
 				if ( $fields ) {
