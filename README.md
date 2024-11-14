@@ -1,61 +1,56 @@
 # ACF Multisite Sync
 
-Synchronize Advanced Custom Fields settings across all sites in your WordPress multisite network. Works with both ACF Free and Pro.
-
-## Features
-
-- 🔄 Synchronize Field Groups and Fields
-- 🔄 Sync Custom Post Types and Taxonomies (Pro only)
-- 🛡️ Built with WordPress VIP coding standards
-- 🚀 Real-time updates
-- 💻 Developer-friendly architecture
+Synchronize ACF field groups, post types, and taxonomies from your primary site to all subsites in a WordPress multisite network.
 
 ## Requirements
 
 - WordPress Multisite
-- Advanced Custom Fields (Free or Pro)
-- PHP 7.4+
-- WordPress 5.8+
+- ACF Pro (activated on all sites)
+- PHP 8.0+
+
+## Use Cases
+
+- Franchise/dealer websites sharing the same content structure
+- Educational institutions with multiple department sites
+- Corporate microsites requiring consistent data architecture
 
 ## Installation
 
-1. Download and Network Activate the plugin
-2. Ensure ACF is activated on sites where you want synchronization
-3. Make changes on your primary site - they'll sync automatically
+1. Install and activate ACF Pro on all sites
+2. Upload plugin to `/wp-content/plugins/`
+3. Network activate via `/wp-admin/network/plugins.php`
+4. Activate ACF Pro license on each subsite
 
-```bash
-composer require josephfusco/acf-multisite-sync
-```
+## Usage
 
-## Development
+1. Configure ACF on your primary site
+2. Visit Custom Fields > Sync to Subsites
+3. Click "Sync Now"
 
-### Hooks
+## Actions & Filters
 
 ```php
+// Modify post type data before sync
+add_filter( 'acf_ms_sync_post_type', function( $post_type ) {
+    return $post_type;
+});
+
+// Modify taxonomy data before sync
+add_filter( 'acf_ms_sync_taxonomy', function( $taxonomy ) {
+    return $taxonomy;
+});
+
 // Modify field group data before sync
 add_filter( 'acf_ms_sync_field_group', function( $field_group ) {
     return $field_group;
 });
 
-// Pro only: Modify post types/taxonomies before sync
-add_filter( 'acf_ms_sync_post_types', function( $post_type ) {
-    return $post_type;
-});
+// After sync completion
+do_action( 'acf_ms_sync_complete', $site_id );
 ```
 
-### Constants
+## Support
 
-```php
-// Disable automatic sync
-define( 'ACF_MS_SYNC_DISABLE', true );
-
-// Enable debug logging
-define( 'ACF_MS_SYNC_DEBUG', true );
-```
-
-## Troubleshooting
-
-1. Verify ACF is active on all sites
-2. Ensure changes are made on primary site
-3. Check error logs
-4. Clear WordPress object cache if needed
+- [File an issue](https://github.com/username/acf-multisite-sync/issues)
+- WordPress 6.0+
+- [GPL v3 or later](https://www.gnu.org/licenses/gpl-3.0.html)

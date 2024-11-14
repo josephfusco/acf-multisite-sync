@@ -45,6 +45,13 @@ class ACF_Sync {
 		add_action( 'acf/save_taxonomy', array( $this, 'sync_taxonomies' ) );
 		add_action( 'acf/update_field_group', array( $this, 'sync_field_groups' ) );
 		add_action( 'admin_menu', array( $this, 'add_sync_menu' ) );
+		add_filter( 'plugin_action_links', array( $this, 'add_plugin_links' ), 10, 2 );
+		add_filter( 'network_admin_plugin_action_links', array( $this, 'add_plugin_links' ), 10, 2 );
+
+		// Check for ACF license status on subsites.
+		if ( ! is_main_site() ) {
+			add_action( 'admin_notices', array( $this, 'show_license_notice' ) );
+		}
 	}
 
 	/**
@@ -79,6 +86,25 @@ class ACF_Sync {
 	}
 
 	/**
+	 * Add plugin links to the plugins page.
+	 *
+	 * @param array  $links Existing plugin links.
+	 * @param string $file  Plugin file path.
+	 * @return array Modified plugin links.
+	 */
+	public function add_plugin_links( $links, $file ) {
+		if ( plugin_basename( ACF_MS_SYNC_PLUGIN_DIR . 'acf-multisite-sync.php' ) === $file && is_main_site() ) {
+			$sync_link = sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( admin_url( 'edit.php?post_type=acf-field-group&page=acf-sync-subsites' ) ),
+				esc_html__( 'Sync Settings', 'acf-multisite-sync' )
+			);
+			array_unshift( $links, $sync_link );
+		}
+		return $links;
+	}
+
+	/**
 	 * Display notice if ACF Pro is not active.
 	 */
 	public function acf_missing_notice() {
@@ -96,6 +122,27 @@ class ACF_Sync {
 		?>
 		<div class="notice notice-error">
 			<p><?php esc_html_e( 'ACF Pro Multisite Sync requires WordPress Multisite to be enabled.', 'acf-multisite-sync' ); ?></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Show admin notice for license activation requirement.
+	 */
+	public function show_license_notice() {
+		?>
+		<div class="notice notice-warning">
+			<p>
+				<?php 
+				esc_html_e( 
+					'ACF Multisite Sync: Please activate your ACF PRO license on this subsite for full functionality.', 
+					'acf-multisite-sync' 
+				); 
+				?>
+				<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=acf-field-group&page=acf-settings-updates' ) ); ?>">
+					<?php esc_html_e( 'Activate License', 'acf-multisite-sync' ); ?>
+				</a>
+			</p>
 		</div>
 		<?php
 	}
@@ -142,6 +189,10 @@ class ACF_Sync {
 	 * Sync all ACF data to subsites.
 	 */
 	private function sync_all_data() {
+		// First sync field groups.
+		$this->sync_field_groups( array() );
+
+		// Then sync post types if they exist.
 		if ( function_exists( 'acf_get_post_types' ) ) {
 			$post_types = acf_get_post_types();
 			foreach ( $post_types as $post_type ) {
@@ -149,16 +200,12 @@ class ACF_Sync {
 			}
 		}
 
+		// Finally sync taxonomies if they exist.
 		if ( function_exists( 'acf_get_taxonomies' ) ) {
 			$taxonomies = acf_get_taxonomies();
 			foreach ( $taxonomies as $taxonomy ) {
 				$this->sync_taxonomies( $taxonomy );
 			}
-		}
-
-		$field_groups = acf_get_field_groups();
-		foreach ( $field_groups as $field_group ) {
-			$this->sync_field_groups( $field_group );
 		}
 	}
 
@@ -218,6 +265,13 @@ class ACF_Sync {
 			return;
 		}
 
+		// If no field group provided, get all field groups from main site.
+		if ( empty( $field_group ) ) {
+			$field_groups = acf_get_field_groups();
+		} else {
+			$field_groups = array( $field_group );
+		}
+
 		$sites = get_sites( array( 'fields' => 'ids' ) );
 
 		foreach ( $sites as $site_id ) {
@@ -227,13 +281,34 @@ class ACF_Sync {
 
 			switch_to_blog( $site_id );
 
-			$sanitized_field_group = $this->sanitize_field_group_data( $field_group );
-			acf_update_field_group( $sanitized_field_group );
+			foreach ( $field_groups as $group ) {
+				// Get the original field group with all its fields.
+				$original_group = acf_get_field_group( $group['key'] );
+				if ( ! $original_group ) {
+					continue;
+				}
 
-			$fields = acf_get_fields( $field_group );
-			if ( $fields ) {
-				foreach ( $fields as $field ) {
-					acf_update_field( $field );
+				// Ensure we have a clean key.
+				$original_group['key'] = wp_unslash( $original_group['key'] );
+
+				// Get all fields for this group.
+				$fields = acf_get_fields( $original_group );
+
+				// Update or create the field group.
+				$group_id = acf_update_field_group( $original_group );
+
+				// Handle the fields.
+				if ( $fields ) {
+					foreach ( $fields as $field ) {
+						// Ensure field has the correct parent.
+						$field['parent'] = $group_id;
+
+						// Clean the field key.
+						$field['key'] = wp_unslash( $field['key'] );
+
+						// Update or create the field.
+						acf_update_field( $field );
+					}
 				}
 			}
 
